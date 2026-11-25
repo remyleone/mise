@@ -1,5 +1,5 @@
 ---
-description: "Install mise on macOS, Linux, or Windows, verify the executable, and keep it up to date."
+description: "Install mise on macOS, Linux, FreeBSD, or Windows, verify the executable, and keep it up to date."
 ---
 
 # Installing mise
@@ -137,8 +137,10 @@ The script installs one of these builds:
 - `linux-arm64-musl`
 - `linux-armv7`
 - `linux-armv7-musl`
+- `freebsd-x64`
+- `freebsd-arm64`
 
-[GitHub Releases](#github-releases) has the same builds plus `windows-x64` and
+[GitHub Releases](#github-releases) has the same builds plus `windows-x64`,
 `windows-arm64`.
 
 The `linux-x64`, `linux-arm64` and `linux-armv7` builds are dynamically linked

@@ -1846,6 +1846,12 @@ fn release_asset_name(os: &str, arch: &str, libc: Option<LibcFlavor>) -> Result<
             Some(LibcFlavor::Musl) => format!("linux-{release_arch}-musl"),
             None => bail!("Linux release targets require a detected libc family"),
         },
+        "freebsd" if matches!(arch, "x86_64" | "aarch64") => {
+            if libc.is_some() {
+                bail!("FreeBSD release targets cannot declare a libc family");
+            }
+            format!("freebsd-{release_arch}")
+        }
         _ => {
             bail!(
                 "mise {} has no official precompiled artifact for {os}/{arch}; set mise_bin, remote_mise, or bootstrap_command",
@@ -1863,6 +1869,7 @@ fn official_release_assets(os: &str, arch: &str) -> Result<Vec<String>> {
             .map(|libc| release_asset_name(os, arch, Some(libc)))
             .collect(),
         "macos" => Ok(vec![release_asset_name(os, arch, None)?]),
+        "freebsd" => Ok(vec![release_asset_name(os, arch, None)?]),
         "windows" => {
             let release_arch = match arch {
                 "x86_64" => "x64",
@@ -3127,8 +3134,17 @@ mod tests {
             release_asset_name("macos", "aarch64", None).unwrap(),
             format!("mise-v{version}-macos-arm64")
         );
+        assert_eq!(
+            release_asset_name("freebsd", "x86_64", None).unwrap(),
+            format!("mise-v{version}-freebsd-x64")
+        );
+        assert_eq!(
+            release_asset_name("freebsd", "aarch64", None).unwrap(),
+            format!("mise-v{version}-freebsd-arm64")
+        );
         assert!(release_asset_name("linux", "riscv64", Some(LibcFlavor::Glibc)).is_err());
-        assert!(release_asset_name("freebsd", "x86_64", None).is_err());
+        assert!(release_asset_name("freebsd", "armv7", None).is_err());
+        assert!(release_asset_name("freebsd", "x86_64", Some(LibcFlavor::Glibc)).is_err());
         assert!(release_asset_name("linux", "x86_64", None).is_err());
     }
 

@@ -22,6 +22,8 @@ platforms=(
 	linux-armv7-musl
 	macos-x64
 	macos-arm64
+	freebsd-x64
+	freebsd-arm64
 )
 for platform in "${platforms[@]}"; do
 	cp artifacts/*/"mise-$MISE_VERSION-$platform.tar.gz" "$RELEASE_DIR/$MISE_VERSION/mise-$MISE_VERSION-$platform.tar.gz"

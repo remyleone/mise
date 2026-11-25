@@ -292,6 +292,49 @@ jobs:
             dist/mise-*.tar.gz
             dist/mise-*.tar.zst
           if-no-files-found: error
+  build-tarball-freebsd:
+    needs: [gate]
+    if: needs.gate.outputs.build == 'true'
+    name: build-tarball-${{matrix.name}}
+    runs-on: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || (github.event.pull_request.user.login != 'jdx' && github.event.pull_request.user.login != 'mise-en-dev')) && 'ubuntu-latest' || 'namespace-profile-endev-linux-amd64-xlarge' }}
+    timeout-minutes: 300
+    env:
+      MINIO_AWS_ACCESS_KEY_ID: ${{ secrets.MINIO_AWS_ACCESS_KEY_ID }}
+      MINIO_AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_AWS_SECRET_ACCESS_KEY }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: freebsd-x64
+            target: x86_64-unknown-freebsd
+          - name: freebsd-arm64
+            target: aarch64-unknown-freebsd
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install cross
+        uses: taiki-e/install-action@51cd0b8c0499559d9a4d75c0f5c67bec3a894ec8 # v2.75.28
+        with:
+          tool: cross
+      # cross builds with the host's default toolchain. The runner image's
+      # default lags behind the workspace rust-version, so move it to stable.
+      - name: Setup Rust toolchain
+        run: rustup update stable --no-self-update && rustup default stable
+      - name: build-tarball ${{matrix.target}}
+        uses: jdx/workflows/retry@7e4ea6cf326e2b3bb4335f733381af531aaa699d # v1.2.1
+        with:
+          timeout_minutes: 120
+          max_attempts: 3
+          command: scripts/build-tarball.sh ${{matrix.target}}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tarball-${{matrix.target}}
+          path: |
+            dist/mise-*.tar.xz
+            dist/mise-*.tar.gz
+            dist/mise-*.tar.zst
+          if-no-files-found: error
   # The release PR's dry run builds the Windows zips in this run. Nothing is signed there, so the
   # self-hosted runner is fine.
   build-windows:
@@ -470,6 +513,7 @@ jobs:
       - e2e-linux
       - build-tarball-linux
       - build-tarball-macos
+      - build-tarball-freebsd
       - build-windows
       - sign-windows
     # Run even when a build failed: this is the required `release` check on
@@ -488,6 +532,7 @@ jobs:
           for result in \
             "${{ needs.build-tarball-linux.result }}" \
             "${{ needs.build-tarball-macos.result }}" \
+            "${{ needs.build-tarball-freebsd.result }}" \
             "${{ (needs.build-windows.result == 'success' && needs.sign-windows.result == 'skipped' || needs.build-windows.result == 'skipped' && needs.sign-windows.result == 'success') && 'success' || 'failure' }}" \
             "${{ needs.rpm.result }}" \
             "${{ needs.deb.result }}"; do
@@ -506,6 +551,7 @@ jobs:
             echo "::error::One or more required jobs did not succeed:"
             echo "  build-tarball-linux: ${{ needs.build-tarball-linux.result }}"
             echo "  build-tarball-macos: ${{ needs.build-tarball-macos.result }}"
+            echo "  build-tarball-freebsd: ${{ needs.build-tarball-freebsd.result }}"
             echo "  build-windows: ${{ needs.build-windows.result }}"
             echo "  sign-windows: ${{ needs.sign-windows.result }}"
             echo "  e2e-linux: ${{ needs.e2e-linux.result }} (expected $expected_e2e)"

@@ -19,6 +19,9 @@ get_os() {
 	*-linux-*)
 		echo "linux"
 		;;
+	*-unknown-freebsd*)
+		echo "freebsd"
+		;;
 	*)
 		error "unsupported OS: $RUST_TRIPLE"
 		;;
@@ -132,12 +135,12 @@ if [[ -n ${MISE_PGO:-} ]]; then
 	# offline workload in scripts/pgo.bash, rebuild with the profile.
 	# Only valid for targets whose binaries can execute on this machine.
 	build_tool=cargo
-	if [[ $os == "linux" ]]; then
+	if [[ $os == "linux" || $os == "freebsd" ]]; then
 		build_tool=cross
 	fi
 	MISE_PGO_BUILD_TOOL="$build_tool" MISE_PGO_TARGET="$RUST_TRIPLE" \
 		bash scripts/pgo.bash --ignore-rust-version --no-default-features --features "$features"
-elif [[ $os == "linux" ]]; then
+elif [[ $os == "linux" || $os == "freebsd" ]]; then
 	cross build --profile=serious --target "$RUST_TRIPLE" --ignore-rust-version --no-default-features --features "$features"
 else
 	cargo build --profile=serious --target "$RUST_TRIPLE" --ignore-rust-version --no-default-features --features "$features"
